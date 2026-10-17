@@ -1,0 +1,210 @@
+/*
+ * black.tax core — JHipster domain model.
+ * Business REST API is API-first (api/core.yaml → openapi-generator → *ApiDelegate implementations).
+ * Generated entity CRUD resources are removed after generation; only domain + repositories are kept,
+ * so every read goes through the tenant-scoped API.
+ * Multi-tenancy: every tenant-owned entity carries `tenantId` (the stokvel code), enforced by Hibernate @TenantId.
+ */
+application {
+  config {
+    baseName core
+    applicationType monolith
+    packageName tax.black.core
+    authenticationType jwt
+    buildTool maven
+    databaseType sql
+    devDatabaseType postgresql
+    prodDatabaseType postgresql
+    cacheProvider no
+    enableHibernateCache false
+    skipClient true
+    clientFramework no
+    enableSwaggerCodegen true
+    serverPort 8080
+    nativeLanguage en
+    languages [en]
+  }
+  entities *
+}
+
+enum StokvelType { GROCERY, ROTATIONAL, BURIAL, INVESTMENT, DEBT_PAYOFF }
+enum Frequency { WEEKLY, FORTNIGHTLY, MONTHLY }
+enum MemberRole { TREASURER, MEMBER }
+enum MandateStatus { PENDING, ACTIVE, FAILED, PAUSED }
+enum ContributionStatus { PENDING, COLLECTED, FAILED, RETRIED }
+enum DebtStatus { ACTIVE, CLEARED }
+enum LoanDirection { OUT, IN }
+enum LoanStatus { ON_TRACK, DUE_SOON, OVERDUE, REPAID }
+enum EscrowStatus { OPEN, FUNDED, SUBMITTED, COMPLETED, REJECTED, EXPIRED }
+enum LoanRequestStatus { OPEN, APPROVED, DECLINED }
+enum CreditTier { A, B, C }
+enum LedgerEntryType { CONTRIBUTION, DEBT_PAYMENT, DEBT_CLEARED, RECYCLED, COLLECTION_FAILED, LOAN_OUT, LOAN_REPAID, LOAN_DECLINED, CONSTITUTION_CHANGE }
+enum DecisionType { PAYMENT, CLEARED, RECYCLE, PAUSE, RESUME, HOLD, LEND, DECLINE, ASSESS }
+enum AgentOutcome { EXECUTE, PAUSE, PROPOSE, NO_ACTION }
+
+/** A stokvel. Its `code` is the tenant id carried by every tenant-owned row. */
+entity Stokvel {
+  code String required unique maxlength(64) pattern(/^[a-z0-9_-]+$/)
+  name String required maxlength(80)
+  stokvelType StokvelType required
+  contributionAmount BigDecimal required
+  frequency Frequency required
+  collectionDay Integer
+  reserveFloor BigDecimal required
+  recyclingEnabled Boolean
+  recyclingPercentage Integer
+  recyclingGraceMonths Integer
+  queueOrder String
+  lendingEnabled Boolean
+  lendingCutoffDays Integer
+  payoutDate LocalDate
+  target BigDecimal
+  payoutSchedule TextBlob
+  startedOn LocalDate
+  totalMonths Integer
+  plannedMembers Integer
+  autonomous Boolean
+  paused Boolean
+  pausedSince Instant
+  walletAddress String
+  createdAt Instant
+}
+
+entity Member {
+  tenantId String required maxlength(64)
+  code String required maxlength(64)
+  userLogin String
+  name String required
+  initials String maxlength(4)
+  phone String
+  town String
+  role MemberRole required
+  contributionAmount BigDecimal required
+  mandateStatus MandateStatus required
+  mandateId String
+  mandateCreated LocalDate
+  recycledMinimum BigDecimal
+  queuePosition Integer
+  projectedClearMonth Integer
+  debitDay Integer
+  removed Boolean
+}
+
+entity Contribution {
+  tenantId String required maxlength(64)
+  period String required maxlength(7)
+  amount BigDecimal required
+  dueDate LocalDate
+  collectedDate LocalDate
+  status ContributionStatus required
+  stitchPaymentId String
+}
+
+entity Debt {
+  tenantId String required maxlength(64)
+  creditor String
+  kind String required
+  startBalance BigDecimal required
+  balance BigDecimal required
+  interestRate BigDecimal required
+  minimumPayment BigDecimal required
+  status DebtStatus required
+  clearedDate LocalDate
+}
+
+entity Loan {
+  tenantId String required maxlength(64)
+  code String required maxlength(64)
+  direction LoanDirection required
+  counterparty String required
+  principal BigDecimal required
+  ratePct BigDecimal required
+  termDays Integer required
+  repaid BigDecimal required
+  totalDue BigDecimal required
+  dueDate LocalDate required
+  status LoanStatus required
+  escrowJobId String
+  escrowStatus EscrowStatus
+  arcTxHash String
+  disbursedAt Instant
+  repaidAt Instant
+}
+
+entity LoanRequest {
+  tenantId String required maxlength(64)
+  code String required maxlength(64)
+  borrowerCode String
+  borrowerName String required
+  borrowerType StokvelType required
+  borrowerMembers Integer required
+  monthsActive Integer required
+  contributionRecord String maxlength(12)
+  priorLoans Integer
+  priorDefaults Integer
+  reserveBalance BigDecimal
+  borrowerReserveFloor BigDecimal
+  borrowerWallet String
+  amount BigDecimal required
+  termDays Integer required
+  ratePct BigDecimal required
+  purpose TextBlob
+  dueDate LocalDate
+  interest BigDecimal
+  escrowAddress String
+  status LoanRequestStatus required
+  declineReason String
+  declineNote String
+  tier CreditTier
+  recommend Boolean
+  reasoning TextBlob
+  note String
+  createdAt Instant
+}
+
+/** Mirror of a Beancount entry, for fast querying. The ledger service holds the record of truth. */
+entity LedgerEntry {
+  tenantId String required maxlength(64)
+  code String required maxlength(64)
+  recordedAt Instant required
+  entryType LedgerEntryType required
+  counterparty String
+  description String required
+  amount BigDecimal required
+  failedAmount BigDecimal
+  runningBalance BigDecimal required
+  reasoning TextBlob
+  decisionCode String
+  arcTxHash String
+  beancount TextBlob
+  beancountHash String
+}
+
+entity AgentDecision {
+  tenantId String required maxlength(64)
+  code String required maxlength(64)
+  decidedAt Instant required
+  decisionType DecisionType required
+  outcomeType AgentOutcome
+  triggerType String
+  summary String required maxlength(500)
+  inputs TextBlob
+  ruleApplied TextBlob
+  outcome TextBlob
+  ledgerEntryCode String
+  arcTxHash String
+}
+
+entity Notification {
+  tenantId String required maxlength(64)
+  sentAt Instant required
+  text String required maxlength(500)
+  decisionCode String
+  decisionType DecisionType
+  unread Boolean
+}
+
+relationship ManyToOne {
+  Contribution{member(code) required} to Member
+  Debt{member(code) required} to Member
+}

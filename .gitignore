@@ -1,0 +1,18 @@
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+backend/core/target/
+backend/core/.jhipster/
+backend/ledger/.venv/
+backend/ledger/data/
+__pycache__/
+.pytest_cache/
+.env
+.DS_Store
+api/schemathesis/**/reports/
+.claude/
+# Private working material (security review, research notes); share deliberately, not by default
+research_notes/
+reports/
+.schemathesis/

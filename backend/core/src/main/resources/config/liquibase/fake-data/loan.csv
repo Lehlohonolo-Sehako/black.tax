@@ -1,0 +1,31 @@
+id;tenant_id;code;direction;counterparty;principal;rate_pct;term_days;repaid;total_due;due_date;status;escrow_job_id;escrow_status;arc_tx_hash;disbursed_at;repaid_at
+1;ew;spork;IN;hospitable reassuringly so;20570.96;22386.28;23214;31154.02;31880.66;2026-10-16;REPAID;intrepid foolhardy;FUNDED;recompense that;2026-10-16T07:52:23;2026-10-16T12:40:59
+2;that usefully mid;versus waltz hourly;IN;broadside mad;10030.62;10400.76;24017;27339.96;22223.99;2026-10-16;OVERDUE;inasmuch hm in;REJECTED;flat;2026-10-17T04:25:31;2026-10-16T21:43:53
+3;dependent fiercely;proliferate regularly;OUT;incomparable kooky;4098.35;6573.11;15244;29307.53;19762.38;2026-10-16;OVERDUE;pish parsnip during;COMPLETED;gaseous;2026-10-16T22:22:48;2026-10-16T14:56:31
+4;even;underneath;OUT;degenerate cow;3900.56;18989.3;23201;8662.58;16477.39;2026-10-16;ON_TRACK;neglected diligently;FUNDED;badly why;2026-10-17T04:33:33;2026-10-16T16:34:14
+5;like reproach which;supposing;OUT;very though delightfully;24756.97;16677.54;10827;10289.42;2156.15;2026-10-17;REPAID;harvest task wherever;FUNDED;qua whereas failing;2026-10-16T13:04:38;2026-10-16T11:53:55
+6;spherical;unripe;IN;greedy;24427.72;23650.42;17389;17507.2;21725.25;2026-10-16;ON_TRACK;grumpy terrorise more;COMPLETED;across;2026-10-16T23:20:22;2026-10-16T19:43:42
+7;so with;provided nor;IN;worth softly indeed;5961.09;2261.29;20905;30598.64;3344.77;2026-10-17;REPAID;modulo consistency during;SUBMITTED;mmm boohoo;2026-10-16T19:57:49;2026-10-16T22:32:09
+8;provided;after and suckle;IN;curiously and promptly;28122.82;20674.25;13545;14054.37;5779.93;2026-10-16;DUE_SOON;ceramics uh-huh where;FUNDED;around outside;2026-10-17T00:06:22;2026-10-16T10:47:20
+9;underneath;inside;IN;evil tender;13690.99;26583.66;25508;10464.81;32492.58;2026-10-16;REPAID;yippee;FUNDED;than;2026-10-17T06:38:18;2026-10-16T22:24:16
+10;via sweetly tasty;elver;OUT;whenever westernize;19004.23;24721.68;6778;20.47;31031.69;2026-10-17;REPAID;hm beside;FUNDED;although;2026-10-17T04:33:43;2026-10-16T17:59:56
+11;whoa;once;IN;that;13705.83;1403.76;4725;12164.54;17253.96;2026-10-17;REPAID;fooey;OPEN;thump;2026-10-17T00:22:01;2026-10-16T16:33:44
+12;appliance worthless milestone;versus;IN;spiffy with;9875.18;20886.35;4111;8698.07;30006.99;2026-10-17;DUE_SOON;um explode;COMPLETED;inside;2026-10-17T06:58:22;2026-10-16T13:15:33
+13;elegant outside;leap;IN;whose;12370.38;20985.56;16840;856.96;3568.85;2026-10-16;DUE_SOON;outfit hourly etch;OPEN;pretty;2026-10-17T01:05:09;2026-10-17T03:58:08
+14;joshingly mmm snow;finally;IN;cheerfully;15820.55;4682.86;10870;9163.57;31643.41;2026-10-16;REPAID;brr but;SUBMITTED;along finally;2026-10-17T00:39:33;2026-10-16T17:56:15
+15;small below;ha;OUT;internalize incidentally unless;14842.59;29284.79;24911;23285.45;29689.02;2026-10-17;REPAID;spork bravely;OPEN;winding down cheerfully;2026-10-17T03:00:32;2026-10-17T03:23:06
+16;hasty;pinion;IN;a likewise fooey;7286;13318.15;32310;15748.86;29199.11;2026-10-16;DUE_SOON;down;REJECTED;since supposing;2026-10-16T17:02:07;2026-10-17T05:14:07
+17;vastly;through corrupt;OUT;woot now blah;20309.23;31610.79;25741;17779.81;12952.73;2026-10-17;REPAID;woefully partially wilt;SUBMITTED;provision;2026-10-16T08:31:21;2026-10-17T00:24:18
+18;giving;sure-footed indeed consequently;OUT;after meanwhile;27460.4;31167.61;18692;9644.74;22243.54;2026-10-16;DUE_SOON;favorite horde frankly;REJECTED;huzzah behind hmph;2026-10-17T06:05:44;2026-10-17T03:02:31
+19;runway safely;nice dereference hmph;IN;hourly;25447.8;4432.63;23799;19197.56;26673.65;2026-10-16;DUE_SOON;filthy long-term;SUBMITTED;scheme hospitable;2026-10-17T03:36:46;2026-10-17T06:20:50
+20;without yet;ha mortally but;IN;validity;25228.21;5394.84;22197;3946.68;10883.96;2026-10-17;DUE_SOON;through;EXPIRED;times whitewash;2026-10-16T23:58:25;2026-10-16T09:05:10
+21;thread;hmph shear;IN;paralyse energetically;18126.17;20529.6;23608;11139.66;13790.52;2026-10-16;ON_TRACK;husky;EXPIRED;costume oof annual;2026-10-16T22:57:01;2026-10-17T04:48:40
+22;shanghai including;towards ride yuck;OUT;frankly;15910.38;13010.49;22949;27461.77;20780.18;2026-10-17;ON_TRACK;than extent once;EXPIRED;how till although;2026-10-17T00:30:31;2026-10-16T20:43:50
+23;for;husk colon;IN;plus;9058.75;24329.84;954;9204.07;31151.45;2026-10-17;OVERDUE;thyme;FUNDED;spew hm;2026-10-17T05:52:50;2026-10-16T15:50:09
+24;shipper noon;phooey joyfully furthermore;OUT;bleakly well-to-do;30404.27;30363.67;4931;15834.29;5979.08;2026-10-17;ON_TRACK;ferociously cooperative lazy;REJECTED;which;2026-10-17T03:14:14;2026-10-17T04:30:29
+25;striking unlike ick;carelessly;IN;parade toady;11996.98;8293.16;7258;12371.28;10071.27;2026-10-16;OVERDUE;unlike amount;SUBMITTED;self-reliant oblong vivaciously;2026-10-16T19:37:53;2026-10-17T06:40:20
+26;teammate swanling aha;bitterly;OUT;yuck;17579.17;24990.42;2824;27251.85;82.62;2026-10-16;DUE_SOON;overconfidently however phooey;OPEN;agitated good-natured godparent;2026-10-16T09:19:30;2026-10-16T23:36:40
+27;colour;gadzooks rotten;OUT;before aha modulo;19175.86;6211.58;14980;7817.88;26850.16;2026-10-17;ON_TRACK;since while;EXPIRED;pasta adrenalin pro;2026-10-16T13:34:06;2026-10-16T10:47:00
+28;limited scared dish;hmph tuxedo flashy;OUT;times;10890.68;18046.36;3408;23752.32;20646.29;2026-10-17;OVERDUE;unfreeze meh;REJECTED;mortally before;2026-10-16T21:10:45;2026-10-16T22:34:45
+29;term;enthusiastically garage;IN;afterwards unfreeze bitterly;21230.18;19262.25;1547;1550.36;8654.86;2026-10-17;DUE_SOON;furthermore;SUBMITTED;how hippodrome though;2026-10-16T21:16:17;2026-10-16T09:56:03
+30;untrue;up outbid wiggly;OUT;as availability;3451.46;4617.92;18533;15338.48;18065.69;2026-10-16;ON_TRACK;deselect;EXPIRED;ick;2026-10-16T07:48:45;2026-10-17T05:57:48

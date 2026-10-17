@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: black.tax ledger service
+  version: 1.0.0
+  description: |
+    Append-only Beancount ledger, one file per stokvel. `append` validates the whole file with Beancount before
+    writing and returns the SHA-256 of the file after the write; core stores that hash on its LedgerEntry mirror,
+    so business record → entry → hash → file state is a verifiable chain. Nothing is ever updated or deleted.
+servers:
+  - url: http://localhost:4200
+security:
+  - serviceToken: []
+paths:
+  /health:
+    get:
+      operationId: health
+      security: []
+      responses:
+        '200': { description: OK }
+  /ledger/append:
+    post:
+      operationId: append
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AppendRequest' }
+      responses:
+        '200':
+          description: Written
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppendResponse' }
+        '401': { description: Missing or wrong service token }
+        '422': { description: Unbalanced postings, invalid field, or invalid Beancount }
+  /ledger/query:
+    post:
+      operationId: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stokvel_id, bql]
+              properties:
+                stokvel_id: { type: string }
+                bql: { type: string, example: "SELECT account, sum(position) WHERE account ~ 'Assets' GROUP BY account" }
+      responses:
+        '200':
+          description: Result rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  columns: { type: array, items: { type: string } }
+                  rows: { type: array, items: { type: array, items: {} } }
+        '400': { description: BQL error }
+  /ledger/{stokvel_id}/balance:
+    get:
+      operationId: balance
+      parameters:
+        - { name: stokvel_id, in: path, required: true, schema: { type: string } }
+        - { name: account, in: query, schema: { type: string, default: 'Assets:Pool:Cash' } }
+      responses:
+        '200':
+          description: Account balance in ZAR
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stokvel_id: { type: string }
+                  account: { type: string }
+                  balance: { type: string }
+                  currency: { type: string }
+  /ledger/{stokvel_id}/file:
+    get:
+      operationId: file
+      parameters:
+        - { name: stokvel_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The whole file and its hash
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stokvel_id: { type: string }
+                  hash: { type: string }
+                  beancount: { type: string }
+        '404': { description: No ledger yet }
+components:
+  securitySchemes:
+    serviceToken: { type: apiKey, in: header, name: X-Service-Token }
+  schemas:
+    Posting:
+      type: object
+      required: [account, amount]
+      properties:
+        account: { type: string, example: 'Assets:Pool:Cash' }
+        amount: { type: string, pattern: '^-?\d{1,12}(\.\d{1,2})?$', example: '-10000.00' }
+        currency: { type: string, enum: [ZAR], default: ZAR }
+    AppendRequest:
+      type: object
+      required: [stokvel_id, timestamp, type, description]
+      properties:
+        stokvel_id: { type: string, pattern: '^[a-z0-9_-]{1,64}$' }
+        entry_id: { type: string, pattern: '^[A-Za-z0-9:._-]{1,200}$', description: 'Idempotency key: appending an existing entry_id returns the original entry with duplicate=true' }
+        timestamp: { type: string, format: date-time }
+        type: { type: string, example: LOAN_OUT }
+        description: { type: string }
+        entries:
+          type: array
+          description: Postings; must sum to zero. Empty for notes and failed collections.
+          items: { $ref: '#/components/schemas/Posting' }
+        flagged: { type: boolean, description: 'Write as `!` (e.g. a failed collection)' }
+        reasoning: { type: string }
+        arc_tx_hash: { type: string }
+        agent_decision_id: { type: string }
+    AppendResponse:
+      type: object
+      required: [stokvel_id, hash, beancount]
+      properties:
+        stokvel_id: { type: string }
+        hash: { type: string, example: 'sha256:9f2c…' }
+        beancount: { type: string, description: The text that was appended }
+        entries_in_file: { type: integer }
+        duplicate: { type: boolean, description: True when entry_id already existed; nothing was written }

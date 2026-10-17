@@ -1,0 +1,32 @@
+{
+  "name": "@blacktax/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "generate": "openapi-typescript ../api/core.yaml -o src/api/generated.ts && npm run generate:view",
+    "generate:view": "python3 -I scripts/convert.py src/screens/markup.html src/screens/View.jsx src/screens/pseudo.css",
+    "smoke": "tsx --tsconfig tsconfig.json scripts/smoke.mts"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "next": "15.5.4",
+    "openapi-fetch": "^0.13.4"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "@eslint/eslintrc": "^3",
+    "openapi-typescript": "^7.4.4"
+  }
+}

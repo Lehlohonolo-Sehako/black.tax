@@ -1,0 +1,12 @@
+/* Base styles from the prototype's <helmet>. No Tailwind preflight: the prototype assumes browser defaults. */
+html, body { margin: 0; height: 100%; }
+body { background: #ECE6DE; color: #0A0908; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: #0A0908; text-decoration: underline; text-decoration-color: #948779; text-underline-offset: 3px; }
+a:hover { text-decoration-color: #0A0908; }
+button { font-family: inherit; }
+button:disabled { cursor: default !important; }
+*:focus-visible { outline: 2px solid #C97B3C; outline-offset: 2px; }
+@keyframes bt-up { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes bt-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes bt-down { from { transform: translateY(-16px); opacity: 0 } to { transform: none; opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }

@@ -1,0 +1,1894 @@
+openapi: 3.0.3
+info:
+  title: black.tax core API
+  version: 1.0.0
+  description: |
+    System of record for stokvels, members, contributions, debts, loans, ledger mirror and agent decisions.
+    API-first: this file is the contract. The Spring Boot (JHipster) service generates `*Api` / `*ApiDelegate`
+    interfaces from it, and the web app and agent service generate their TypeScript clients from it.
+
+    Conventions
+    - Money is a decimal string in rand (`"30000.00"`); the UI formats it.
+    - Every path under `/stokvels/{stokvelId}` is tenant-scoped. The caller must be a member of that stokvel
+      (or the agent service, with a service token). Data from other stokvels is never returned.
+    - Times are ISO-8601 with offset (SAST, `+02:00`).
+servers:
+  - url: http://localhost:8080/api
+security:
+  - bearerAuth: []
+tags:
+  - name: auth
+  - name: stokvels
+  - name: members
+  - name: ledger
+  - name: agent
+  - name: lending
+  - name: notifications
+  - name: webhooks
+  - name: internal
+    description: Called by the agent service with a service token, never by the browser.
+  - name: dev
+    description: Only enabled with the `dev` Spring profile.
+
+paths:
+  # ------------------------------------------------------------------ auth
+  /auth/otp:
+    post:
+      tags:
+        - auth
+      operationId: requestOtp
+      security: []
+      summary: Send a 6-digit sign-in code by SMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+      responses:
+        '204':
+          description: Code sent
+        '400':
+          $ref: '#/components/responses/Problem'
+  /auth/otp/verify:
+    post:
+      tags:
+        - auth
+      operationId: verifyOtp
+      security: []
+      summary: Exchange a code for a JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerification'
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /me:
+    get:
+      tags:
+        - auth
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: The signed-in user and the stokvels they belong to
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+
+  # ------------------------------------------------------------------ stokvels
+  /stokvels:
+    get:
+      tags:
+        - stokvels
+      operationId: listStokvels
+      summary: Stokvels the caller belongs to or is invited to (switcher)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StokvelListItem'
+    post:
+      tags:
+        - stokvels
+      operationId: createStokvel
+      summary: Onboarding. The caller becomes the treasurer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStokvelRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stokvel'
+  /stokvels/{stokvelId}:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - stokvels
+      operationId: getStokvel
+      responses:
+        '200':
+          description: The stokvel and its constitution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stokvel'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /stokvels/{stokvelId}/dashboard:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - stokvels
+      operationId: getDashboard
+      summary: Figures for Home. Every figure reconciles with the ledger and member
+        debts.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+  /stokvels/{stokvelId}/constitution:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    patch:
+      tags:
+        - stokvels
+      operationId: updateConstitution
+      summary: Treasurer only. Each changed field appends a CONSTITUTION_CHANGE ledger
+        entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConstitutionUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stokvel'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /stokvels/{stokvelId}/queue-votes:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - stokvels
+      operationId: requestQueueVote
+      responses:
+        '202':
+          description: Vote sent to members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerEntry'
+  /stokvels/{stokvelId}/dissolution-proposals:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - stokvels
+      operationId: proposeDissolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - confirmName
+              properties:
+                confirmName:
+                  type: string
+                  description: Must equal the stokvel name exactly
+      responses:
+        '202':
+          description: Proposal sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerEntry'
+        '422':
+          $ref: '#/components/responses/Problem'
+
+  # ------------------------------------------------------------------ members
+  /stokvels/{stokvelId}/members:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - members
+      operationId: listMembers
+      summary: Roster in queue order (debt-payoff) or join order
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+  /stokvels/{stokvelId}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - $ref: '#/components/parameters/MemberId'
+    get:
+      tags:
+        - members
+      operationId: getMember
+      responses:
+        '200':
+          description: Member with the last six contribution periods
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberDetail'
+    patch:
+      tags:
+        - members
+      operationId: updateMemberContribution
+      summary: Sets the mandate to PENDING and asks the member to re-approve with
+        their bank
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - contributionAmount
+              properties:
+                contributionAmount:
+                  $ref: '#/components/schemas/Money'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+    delete:
+      tags:
+        - members
+      operationId: removeMember
+      responses:
+        '200':
+          description: Removed. Returns what they owe or are owed under rule 4.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberRemoval'
+  /stokvels/{stokvelId}/members/{memberId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - $ref: '#/components/parameters/MemberId'
+    post:
+      tags:
+        - members
+      operationId: pauseMandate
+      responses:
+        '200':
+          description: Paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+  /stokvels/{stokvelId}/members/{memberId}/resume:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - $ref: '#/components/parameters/MemberId'
+    post:
+      tags:
+        - members
+      operationId: resumeMandate
+      responses:
+        '200':
+          description: Resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+  /stokvels/{stokvelId}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - members
+      operationId: inviteMember
+      summary: Creates a PENDING member and sends the Stitch DebiCheck mandate link by
+        SMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '502':
+          $ref: '#/components/responses/Problem'
+
+  # ------------------------------------------------------------------ ledger
+  /stokvels/{stokvelId}/ledger:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - ledger
+      operationId: listLedgerEntries
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: type
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/LedgerEntryType'
+      responses:
+        '200':
+          description: Entries oldest first, with the pool balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerPage'
+  /stokvels/{stokvelId}/ledger/export.csv:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - ledger
+      operationId: exportLedger
+      responses:
+        '200':
+          description: CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+  /stokvels/{stokvelId}/ledger/{entryId}:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - name: entryId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - ledger
+      operationId: getLedgerEntry
+      responses:
+        '200':
+          description: Entry with its Beancount text and file hash
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerEntry'
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  # ------------------------------------------------------------------ agent
+  /stokvels/{stokvelId}/decisions:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - agent
+      operationId: listDecisions
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            $ref: '#/components/schemas/DecisionFilter'
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentDecision'
+  /stokvels/{stokvelId}/agent/evaluations:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - agent
+      operationId: runAgent
+      summary: Treasurer asks the agent to evaluate now (MANUAL trigger)
+      responses:
+        '200':
+          description: The agent's evaluation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentEvaluation'
+  /stokvels/{stokvelId}/agent/resume:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - agent
+      operationId: resumeAgent
+      summary: Treasurer override of a pause. Logged as a decision and a ledger entry.
+      responses:
+        '200':
+          description: Resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDecision'
+
+  # ------------------------------------------------------------------ lending
+  /stokvels/{stokvelId}/lendable:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - lending
+      operationId: getLendable
+      responses:
+        '200':
+          description: Pool − reserve − obligations − loans funded today
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lendable'
+  /stokvels/{stokvelId}/loan-requests:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - lending
+      operationId: listLoanRequests
+      responses:
+        '200':
+          description: Open requests, each assessed by the agent
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoanRequest'
+    post:
+      tags:
+        - lending
+      operationId: createLoanRequest
+      summary: Another stokvel's agent asks to borrow. The lender's agent assesses it
+        on arrival.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewLoanRequest'
+      responses:
+        '201':
+          description: Created and assessed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanRequest'
+  /stokvels/{stokvelId}/loan-requests/{requestId}:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - $ref: '#/components/parameters/RequestId'
+    get:
+      tags:
+        - lending
+      operationId: getLoanRequest
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanRequest'
+  /stokvels/{stokvelId}/loan-requests/{requestId}/approval:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - $ref: '#/components/parameters/RequestId'
+    post:
+      tags:
+        - lending
+      operationId: approveLoanRequest
+      summary: Treasurer approves. The agent creates the ERC-8183 job on Arc and funds
+        the escrow.
+      responses:
+        '200':
+          description: Escrow funded or submitted (testnet finality is not awaited)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanApproval'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+  /stokvels/{stokvelId}/loan-requests/{requestId}/decline:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+      - $ref: '#/components/parameters/RequestId'
+    post:
+      tags:
+        - lending
+      operationId: declineLoanRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanDecline'
+      responses:
+        '200':
+          description: Declined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanRequest'
+  /stokvels/{stokvelId}/loans:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - lending
+      operationId: listLoans
+      parameters:
+        - name: direction
+          in: query
+          schema:
+            $ref: '#/components/schemas/LoanDirection'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Loan'
+
+  # ------------------------------------------------------------------ notifications
+  /stokvels/{stokvelId}/notifications:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - notifications
+      operationId: listNotifications
+      responses:
+        '200':
+          description: Latest agent events, also sent on WhatsApp
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+  /stokvels/{stokvelId}/notifications/read:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - notifications
+      operationId: markNotificationsRead
+      responses:
+        '204':
+          description: Marked read
+
+  # ------------------------------------------------------------------ webhooks
+  /webhooks/stitch:
+    post:
+      tags:
+        - webhooks
+      operationId: receiveStitchWebhook
+      security: []
+      summary: Signed Stitch events (mandate and collection results)
+      parameters:
+        - name: X-Stitch-Signature
+          in: header
+          required: true
+          description: '`t=<unix seconds>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">`,
+            verified in constant time'
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StitchEvent'
+      responses:
+        '204':
+          description: Processed
+        '401':
+          $ref: '#/components/responses/Problem'
+
+  # ------------------------------------------------------------------ internal (agent service)
+  /internal/stokvels/{stokvelId}/state:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    get:
+      tags:
+        - internal
+      operationId: getAgentState
+      security:
+        - serviceToken: []
+      summary: Everything the agent needs to evaluate, in one read
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentState'
+  /internal/stokvels/{stokvelId}/decisions:
+    parameters:
+      - $ref: '#/components/parameters/StokvelId'
+    post:
+      tags:
+        - internal
+      operationId: recordDecision
+      security:
+        - serviceToken: []
+      summary: The agent writes a decision back. Core mirrors the ledger entry and
+        applies its effects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordDecisionRequest'
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDecision'
+
+  # ------------------------------------------------------------------ dev
+  /dev/stitch/events:
+    post:
+      tags:
+        - dev
+      operationId: simulateStitchEvent
+      summary: Sign a Stitch event with the webhook secret and deliver it, as the
+        sandbox would
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulatedStitchEvent'
+      responses:
+        '202':
+          description: Delivered
+  /dev/sessions:
+    post:
+      tags:
+        - dev
+      operationId: devSession
+      security: []
+      summary: Demo login as a seeded user (treasurer or member) without an SMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+                  example: '0825550147'
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    serviceToken:
+      type: apiKey
+      in: header
+      name: X-Service-Token
+  parameters:
+    StokvelId:
+      name: stokvelId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: masakhane
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: thabo
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: REQ-31
+  responses:
+    Problem:
+      description: RFC 7807 problem
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Money:
+      type: string
+      pattern: ^-?\d+(\.\d{1,2})?$
+      example: '30000.00'
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    Role:
+      type: string
+      enum:
+        - TREASURER
+        - MEMBER
+        - ADMIN
+    StokvelType:
+      type: string
+      enum:
+        - GROCERY
+        - ROTATIONAL
+        - BURIAL
+        - INVESTMENT
+        - DEBT_PAYOFF
+    Frequency:
+      type: string
+      enum:
+        - WEEKLY
+        - FORTNIGHTLY
+        - MONTHLY
+    MandateStatus:
+      type: string
+      enum:
+        - PENDING
+        - ACTIVE
+        - FAILED
+        - PAUSED
+    QueueStatus:
+      type: string
+      enum:
+        - CLEARED
+        - CURRENT
+        - WAITING
+    ContributionStatus:
+      type: string
+      enum:
+        - PENDING
+        - COLLECTED
+        - FAILED
+        - RETRIED
+        - DUE
+        - UPCOMING
+    LedgerEntryType:
+      type: string
+      enum:
+        - CONTRIBUTION
+        - DEBT_PAYMENT
+        - DEBT_CLEARED
+        - RECYCLED
+        - COLLECTION_FAILED
+        - LOAN_OUT
+        - LOAN_REPAID
+        - LOAN_DECLINED
+        - CONSTITUTION_CHANGE
+    DecisionType:
+      type: string
+      enum:
+        - PAYMENT
+        - CLEARED
+        - RECYCLE
+        - PAUSE
+        - RESUME
+        - HOLD
+        - LEND
+        - DECLINE
+        - ASSESS
+    DecisionFilter:
+      type: string
+      enum:
+        - Lending
+        - Contributions
+        - Pauses
+        - Cleared
+    AgentOutcome:
+      type: string
+      enum:
+        - EXECUTE
+        - PAUSE
+        - PROPOSE
+        - NO_ACTION
+    Trigger:
+      type: string
+      enum:
+        - SCHEDULED_TICK
+        - CONTRIBUTION_WEBHOOK
+        - MANUAL
+    Tier:
+      type: string
+      enum:
+        - A
+        - B
+        - C
+    LoanStatus:
+      type: string
+      enum:
+        - ON_TRACK
+        - DUE_SOON
+        - OVERDUE
+        - REPAID
+    LoanDirection:
+      type: string
+      enum:
+        - OUT
+        - IN
+    EscrowStatus:
+      type: string
+      enum:
+        - OPEN
+        - FUNDED
+        - SUBMITTED
+        - COMPLETED
+        - REJECTED
+        - EXPIRED
+
+    OtpRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          description: 10 digits starting with 0
+          example: '0825550147'
+        intent:
+          type: string
+          enum:
+            - SIGN_UP
+            - SIGN_IN
+          default: SIGN_IN
+        popiaConsent:
+          type: boolean
+          description: Required for SIGN_UP
+        name:
+          type: string
+    OtpVerification:
+      type: object
+      required:
+        - phone
+        - code
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+          pattern: ^\d{6}$
+    Session:
+      type: object
+      required:
+        - idToken
+        - user
+      properties:
+        idToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/CurrentUser'
+    CurrentUser:
+      type: object
+      required:
+        - id
+        - name
+        - phone
+        - memberships
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        initials:
+          type: string
+        phone:
+          type: string
+        town:
+          type: string
+        memberships:
+          type: array
+          items:
+            type: object
+            required:
+              - stokvelId
+              - role
+            properties:
+              stokvelId:
+                type: string
+              memberId:
+                type: string
+              role:
+                $ref: '#/components/schemas/Role'
+
+    Recycling:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        percentage:
+          type: integer
+          enum:
+            - 50
+            - 75
+            - 100
+        graceMonths:
+          type: integer
+          minimum: 0
+          maximum: 3
+    Stokvel:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - contributionAmount
+        - frequency
+        - reserveFloor
+        - memberCount
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/StokvelType'
+        contributionAmount:
+          $ref: '#/components/schemas/Money'
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        collectionDay:
+          type: integer
+        reserveFloor:
+          $ref: '#/components/schemas/Money'
+        recycling:
+          $ref: '#/components/schemas/Recycling'
+        queueOrder:
+          type: string
+          enum:
+            - HIGHEST_RATE_FIRST
+            - DRAWN_LOTS
+        lendingEnabled:
+          type: boolean
+        lendingCutoffDays:
+          type: integer
+        payoutDate:
+          type: string
+          format: date
+        target:
+          $ref: '#/components/schemas/Money'
+        startedOn:
+          type: string
+          format: date
+        currentMonth:
+          type: integer
+        totalMonths:
+          type: integer
+        memberCount:
+          type: integer
+        autonomous:
+          type: boolean
+          description: Agent executes without treasurer approval
+        walletAddress:
+          type: string
+          description: Stokvel-owned Arc wallet
+        createdAt:
+          type: string
+          format: date-time
+    StokvelListItem:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - memberCount
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/StokvelType'
+        memberCount:
+          type: integer
+        contributionAmount:
+          $ref: '#/components/schemas/Money'
+        role:
+          $ref: '#/components/schemas/Role'
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INVITED
+    CreateStokvelRequest:
+      type: object
+      required:
+        - name
+        - type
+        - contributionAmount
+        - frequency
+        - plannedMembers
+        - reserveFloor
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        type:
+          $ref: '#/components/schemas/StokvelType'
+        contributionAmount:
+          $ref: '#/components/schemas/Money'
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        plannedMembers:
+          type: integer
+          minimum: 2
+          maximum: 100
+        reserveFloor:
+          $ref: '#/components/schemas/Money'
+        queueOrder:
+          type: string
+          enum:
+            - HIGHEST_RATE_FIRST
+            - DRAWN_LOTS
+        recycling:
+          $ref: '#/components/schemas/Recycling'
+    ConstitutionUpdate:
+      type: object
+      properties:
+        contributionAmount:
+          $ref: '#/components/schemas/Money'
+        reserveFloor:
+          $ref: '#/components/schemas/Money'
+        recycling:
+          $ref: '#/components/schemas/Recycling'
+        autonomous:
+          type: boolean
+
+    Dashboard:
+      type: object
+      required:
+        - stokvelId
+        - poolBalance
+        - reserveFloor
+      properties:
+        stokvelId:
+          type: string
+        poolBalance:
+          $ref: '#/components/schemas/Money'
+        reserveFloor:
+          $ref: '#/components/schemas/Money'
+        aboveReserve:
+          $ref: '#/components/schemas/Money'
+        debtAtStart:
+          $ref: '#/components/schemas/Money'
+        debtRemaining:
+          $ref: '#/components/schemas/Money'
+        clearedSinceStart:
+          $ref: '#/components/schemas/Money'
+        clearedPct:
+          type: number
+        interestSaved:
+          $ref: '#/components/schemas/Money'
+        membersFree:
+          type: integer
+        memberCount:
+          type: integer
+        recycledThisMonth:
+          $ref: '#/components/schemas/Money'
+        recycledByMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+                example: 2026-10
+              amount:
+                $ref: '#/components/schemas/Money'
+        addedThisMonth:
+          $ref: '#/components/schemas/Money'
+        nextPayout:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+            amount:
+              $ref: '#/components/schemas/Money'
+            memberId:
+              type: string
+        agentStatus:
+          $ref: '#/components/schemas/AgentStatus'
+    AgentStatus:
+      type: object
+      required:
+        - state
+        - message
+      properties:
+        state:
+          type: string
+          enum:
+            - ACTIVE
+            - PAUSED
+            - WAITING
+        since:
+          type: string
+          format: date-time
+        checkedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+          description: First-person, plain language
+        decisionId:
+          type: string
+
+    Debt:
+      type: object
+      required:
+        - creditor
+        - kind
+        - startBalance
+        - balance
+        - interestRate
+        - minimumPayment
+        - status
+      properties:
+        creditor:
+          type: string
+        kind:
+          type: string
+          example: Store card
+        startBalance:
+          $ref: '#/components/schemas/Money'
+        balance:
+          $ref: '#/components/schemas/Money'
+        interestRate:
+          type: number
+          description: Annual percentage
+          example: 24
+        minimumPayment:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - CLEARED
+        clearedDate:
+          type: string
+          format: date
+    Member:
+      type: object
+      required:
+        - id
+        - name
+        - initials
+        - role
+        - contributionAmount
+        - mandateStatus
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        initials:
+          type: string
+        phone:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        contributionAmount:
+          $ref: '#/components/schemas/Money'
+        mandateStatus:
+          $ref: '#/components/schemas/MandateStatus'
+        mandateId:
+          type: string
+        mandateCreated:
+          type: string
+          format: date
+        queuePosition:
+          type: integer
+        queueStatus:
+          $ref: '#/components/schemas/QueueStatus'
+        projectedClearMonth:
+          type: integer
+          description: Month 1 is the stokvel's first month
+        recycledMinimum:
+          $ref: '#/components/schemas/Money'
+        debt:
+          $ref: '#/components/schemas/Debt'
+    MemberDetail:
+      allOf:
+        - $ref: '#/components/schemas/Member'
+        - type: object
+          properties:
+            contributions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contribution'
+    Contribution:
+      type: object
+      required:
+        - id
+        - period
+        - amount
+        - status
+      properties:
+        id:
+          type: string
+        period:
+          type: string
+          example: 2026-10
+        amount:
+          $ref: '#/components/schemas/Money'
+        dueDate:
+          type: string
+          format: date
+        collectedDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ContributionStatus'
+        stitchPaymentId:
+          type: string
+    MemberRemoval:
+      type: object
+      properties:
+        memberId:
+          type: string
+        owesGroup:
+          $ref: '#/components/schemas/Money'
+        refunded:
+          $ref: '#/components/schemas/Money'
+        newReserveFloor:
+          $ref: '#/components/schemas/Money'
+        ledgerEntry:
+          $ref: '#/components/schemas/LedgerEntry'
+    InvitationRequest:
+      type: object
+      required:
+        - name
+        - phone
+        - contributionAmount
+      properties:
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+          pattern: ^0\d{9}$
+        contributionAmount:
+          $ref: '#/components/schemas/Money'
+    Invitation:
+      type: object
+      required:
+        - member
+        - sentTo
+      properties:
+        member:
+          $ref: '#/components/schemas/Member'
+        sentTo:
+          type: string
+          example: +27 82 555 0134
+        mandateLink:
+          type: string
+          description: Stitch-hosted DebiCheck authentication page
+
+    LedgerEntry:
+      type: object
+      required:
+        - id
+        - stokvelId
+        - timestamp
+        - type
+        - description
+        - amount
+        - runningBalance
+      properties:
+        id:
+          type: string
+        stokvelId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          $ref: '#/components/schemas/LedgerEntryType'
+        counterparty:
+          type: string
+        description:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        failedAmount:
+          $ref: '#/components/schemas/Money'
+        runningBalance:
+          $ref: '#/components/schemas/Money'
+        reasoning:
+          type: string
+        decisionId:
+          type: string
+        arcTxHash:
+          type: string
+        beancount:
+          type: string
+        beancountHash:
+          type: string
+    LedgerPage:
+      type: object
+      required:
+        - balance
+        - entries
+      properties:
+        balance:
+          $ref: '#/components/schemas/Money'
+        asOf:
+          type: string
+          format: date-time
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
+
+    AgentDecision:
+      type: object
+      required:
+        - id
+        - stokvelId
+        - at
+        - type
+        - filter
+        - summary
+        - inputs
+        - ruleApplied
+        - outcome
+      properties:
+        id:
+          type: string
+        stokvelId:
+          type: string
+        at:
+          type: string
+          format: date-time
+        type:
+          $ref: '#/components/schemas/DecisionType'
+        filter:
+          $ref: '#/components/schemas/DecisionFilter'
+        decision:
+          $ref: '#/components/schemas/AgentOutcome'
+        summary:
+          type: string
+        inputs:
+          type: array
+          description: What I saw
+          items:
+            $ref: '#/components/schemas/KeyValue'
+        ruleApplied:
+          type: string
+          description: What I decided
+        outcome:
+          type: string
+          description: What happened
+        ledgerEntryId:
+          type: string
+        arcTxHash:
+          type: string
+    KeyValue:
+      type: object
+      required:
+        - label
+        - value
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+    AgentEvaluation:
+      type: object
+      required:
+        - decision
+        - reasoning
+      properties:
+        decision:
+          $ref: '#/components/schemas/AgentOutcome'
+        reasoning:
+          type: string
+        decisionId:
+          type: string
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentAction'
+    AgentAction:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - ARC_ESCROW_RELEASE
+            - EFT_PAYMENT
+            - RECYCLE_MINIMUM
+            - NOTIFY
+        memberId:
+          type: string
+        jobId:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        txHash:
+          type: string
+
+    Lendable:
+      type: object
+      required:
+        - pool
+        - reserveFloor
+        - lendable
+      properties:
+        pool:
+          $ref: '#/components/schemas/Money'
+        reserveFloor:
+          $ref: '#/components/schemas/Money'
+        obligations:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              due:
+                type: string
+                format: date
+              amount:
+                $ref: '#/components/schemas/Money'
+        lentToday:
+          $ref: '#/components/schemas/Money'
+        lendable:
+          $ref: '#/components/schemas/Money'
+    BorrowerProfile:
+      type: object
+      required:
+        - name
+        - type
+        - members
+        - monthsActive
+      properties:
+        stokvelId:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/StokvelType'
+        members:
+          type: integer
+        monthsActive:
+          type: integer
+        contributionRecord:
+          type: string
+          description: Last 12 months, oldest first. `o` on time, `l` late, `m` missed.
+          pattern: ^[olm]{0,12}$
+        priorLoans:
+          type: integer
+        defaults:
+          type: integer
+        reserveBalance:
+          $ref: '#/components/schemas/Money'
+        reserveFloor:
+          $ref: '#/components/schemas/Money'
+        walletAddress:
+          type: string
+    NewLoanRequest:
+      type: object
+      required:
+        - borrower
+        - amount
+        - termDays
+        - ratePct
+        - purpose
+      properties:
+        borrower:
+          $ref: '#/components/schemas/BorrowerProfile'
+        amount:
+          $ref: '#/components/schemas/Money'
+        termDays:
+          type: integer
+          minimum: 7
+          maximum: 365
+        ratePct:
+          type: number
+        purpose:
+          type: string
+    Assessment:
+      type: object
+      required:
+        - tier
+        - recommend
+        - reasoning
+      properties:
+        tier:
+          $ref: '#/components/schemas/Tier'
+        recommend:
+          type: boolean
+        reasoning:
+          type: string
+        note:
+          type: string
+        decisionId:
+          type: string
+    LoanRequest:
+      type: object
+      required:
+        - id
+        - borrower
+        - amount
+        - termDays
+        - ratePct
+        - status
+      properties:
+        id:
+          type: string
+        borrower:
+          $ref: '#/components/schemas/BorrowerProfile'
+        amount:
+          $ref: '#/components/schemas/Money'
+        termDays:
+          type: integer
+        ratePct:
+          type: number
+        purpose:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        interest:
+          $ref: '#/components/schemas/Money'
+        escrowAddress:
+          type: string
+        status:
+          type: string
+          enum:
+            - OPEN
+            - APPROVED
+            - DECLINED
+        declineReason:
+          type: string
+        assessment:
+          $ref: '#/components/schemas/Assessment'
+    LoanDecline:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          enum:
+            - Payout is too close
+            - Their contribution record is too short
+            - Rate is too low for the risk
+            - Something else
+        note:
+          type: string
+          minLength: 3
+    LoanApproval:
+      type: object
+      required:
+        - status
+        - loan
+      properties:
+        status:
+          $ref: '#/components/schemas/EscrowStatus'
+        jobId:
+          type: string
+        txHash:
+          type: string
+        explorerUrl:
+          type: string
+        loan:
+          $ref: '#/components/schemas/Loan'
+        lendableAfter:
+          $ref: '#/components/schemas/Money'
+    Loan:
+      type: object
+      required:
+        - id
+        - direction
+        - counterparty
+        - principal
+        - ratePct
+        - termDays
+        - repaid
+        - totalDue
+        - dueDate
+        - status
+      properties:
+        id:
+          type: string
+        direction:
+          $ref: '#/components/schemas/LoanDirection'
+        counterparty:
+          type: string
+        principal:
+          $ref: '#/components/schemas/Money'
+        ratePct:
+          type: number
+        termDays:
+          type: integer
+        repaid:
+          $ref: '#/components/schemas/Money'
+        totalDue:
+          $ref: '#/components/schemas/Money'
+        dueDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/LoanStatus'
+        escrowJobId:
+          type: string
+        escrowStatus:
+          $ref: '#/components/schemas/EscrowStatus'
+        arcTxHash:
+          type: string
+        disbursedAt:
+          type: string
+          format: date-time
+        repaidAt:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      required:
+        - id
+        - at
+        - text
+        - unread
+      properties:
+        id:
+          type: string
+        at:
+          type: string
+          format: date-time
+        text:
+          type: string
+        decisionId:
+          type: string
+        decisionType:
+          $ref: '#/components/schemas/DecisionType'
+        unread:
+          type: boolean
+
+    StitchEvent:
+      type: object
+      required:
+        - id
+        - type
+        - createdAt
+        - data
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - MANDATE_AUTHENTICATED
+            - MANDATE_FAILED
+            - MANDATE_CANCELLED
+            - PAYMENT_SUCCEEDED
+            - PAYMENT_FAILED
+        createdAt:
+          type: string
+          format: date-time
+        data:
+          type: object
+          properties:
+            mandateId:
+              type: string
+            paymentId:
+              type: string
+            externalReference:
+              type: string
+              description: '`<stokvelId>:<memberId>[:<period>]`'
+            amount:
+              $ref: '#/components/schemas/Money'
+            reason:
+              type: string
+    SimulatedStitchEvent:
+      type: object
+      required:
+        - type
+        - stokvelId
+        - memberId
+      properties:
+        type:
+          type: string
+          enum:
+            - MANDATE_AUTHENTICATED
+            - MANDATE_FAILED
+            - MANDATE_CANCELLED
+            - PAYMENT_SUCCEEDED
+            - PAYMENT_FAILED
+        stokvelId:
+          type: string
+        memberId:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        period:
+          type: string
+          example: 2026-11
+        reason:
+          type: string
+
+    AgentState:
+      type: object
+      required:
+        - stokvel
+        - members
+        - contributions
+        - poolBalance
+        - asOf
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        stokvel:
+          $ref: '#/components/schemas/Stokvel'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        contributions:
+          type: array
+          description: Current period
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Contribution'
+              - type: object
+                properties:
+                  memberId:
+                    type: string
+        poolBalance:
+          $ref: '#/components/schemas/Money'
+        paused:
+          type: boolean
+        lastDecisionId:
+          type: string
+    RecordDecisionRequest:
+      type: object
+      required:
+        - type
+        - decision
+        - summary
+        - inputs
+        - ruleApplied
+        - outcome
+        - trigger
+      properties:
+        trigger:
+          $ref: '#/components/schemas/Trigger'
+        type:
+          $ref: '#/components/schemas/DecisionType'
+        decision:
+          $ref: '#/components/schemas/AgentOutcome'
+        summary:
+          type: string
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyValue'
+        ruleApplied:
+          type: string
+        outcome:
+          type: string
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentAction'
+        ledger:
+          type: object
+          description: Present when the decision moved money or changed state. Already
+            appended to Beancount.
+          properties:
+            type:
+              $ref: '#/components/schemas/LedgerEntryType'
+            description:
+              type: string
+            counterparty:
+              type: string
+            amount:
+              $ref: '#/components/schemas/Money'
+            beancount:
+              type: string
+            beancountHash:
+              type: string
+            arcTxHash:
+              type: string

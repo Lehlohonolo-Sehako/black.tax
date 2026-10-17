@@ -1,0 +1,41 @@
+# Schemathesis smoke profile for api/core.yaml (positive cases, no DELETE, no dev endpoints).
+# Run against a throwaway stack, never the demo one: it creates data.
+#   CORE_URL=http://localhost:8080/api SERVICE_TOKEN=... schemathesis run ../../core.yaml
+base-url = "${CORE_URL}"
+request-timeout = 15.0
+seed = 7
+
+[auth.dynamic.openapi.bearerAuth]
+path = "/dev/sessions"
+payload = { phone = "0825550147" }
+extract_selector = "/idToken"
+
+[auth.openapi.serviceToken]
+api_key = "${SERVICE_TOKEN}"
+
+[parameters]
+"path.stokvelId" = "grocery"
+
+[generation]
+mode = "positive"
+max-examples = 25
+
+[phases]
+stateful.enabled = false
+
+[checks]
+enabled = false
+not_a_server_error.enabled = true
+response_schema_conformance.enabled = true
+content_type_conformance.enabled = true
+
+[[operations]]
+include-tag = "dev"
+enabled = false
+
+[[operations]]
+include-method = "DELETE"
+enabled = false
+
+[reports.junit]
+path = "reports/core-junit.xml"

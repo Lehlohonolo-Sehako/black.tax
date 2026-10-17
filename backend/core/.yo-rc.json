@@ -1,0 +1,24 @@
+{
+  "generator-jhipster": {
+    "applicationType": "monolith",
+    "authenticationType": "jwt",
+    "baseName": "core",
+    "buildTool": "maven",
+    "cacheProvider": "no",
+    "clientFramework": "no",
+    "databaseType": "sql",
+    "devDatabaseType": "postgresql",
+    "enableHibernateCache": false,
+    "enableSwaggerCodegen": true,
+    "entities": ["Stokvel", "Member", "Contribution", "Debt", "Loan", "LoanRequest", "LedgerEntry", "AgentDecision", "Notification"],
+    "jhipsterVersion": "9.0.0",
+    "jwtSecretKey": "YWQyMjMxZGE3ZTEzOTIwODc1OGZmMWJiNDYyYjRhZmFlMGZiZmUwYzFmZmE1ZmJjMDI3OTM1NjAyMzI2OTVkNzRiMDUzMTIyMWIxOTEzY2NhZmQxYWUyZjIzOGNmOGYwYTA3NjViZDE0NjNmNTMyNGFhN2RjODVjM2IwOWJmMWM=",
+    "languages": ["en"],
+    "lastLiquibaseTimestamp": 1792221349000,
+    "nativeLanguage": "en",
+    "packageName": "tax.black.core",
+    "prodDatabaseType": "postgresql",
+    "serverPort": "8080",
+    "skipClient": true
+  }
+}

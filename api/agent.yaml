@@ -1,0 +1,158 @@
+openapi: 3.0.3
+info:
+  title: black.tax agent service
+  version: 1.0.0
+  description: |
+    Stateless decision engine. It reads stokvel state from core, reads the pool balance from the ledger service,
+    decides, calls Arc (Circle developer-controlled wallets, ERC-8183 escrow), appends to the ledger and writes the
+    decision back to core. `decide()` is a pure function of its inputs, so every decision is replayable.
+servers:
+  - url: http://localhost:4100
+security:
+  - serviceToken: []
+paths:
+  /health:
+    get:
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  arcMode: { type: string, enum: [circle, mock] }
+  /agent/evaluate:
+    post:
+      operationId: evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EvaluateRequest' }
+      responses:
+        '200':
+          description: The decision
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvaluateResponse' }
+  /agent/assess:
+    post:
+      operationId: assess
+      summary: Credit tier (A/B/C) for an inter-stokvel loan request, with reasoning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssessRequest' }
+      responses:
+        '200':
+          description: Assessment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssessResponse' }
+  /agent/loans/fund:
+    post:
+      operationId: fundLoan
+      summary: Create the ERC-8183 job, fund the escrow in USDC, append LOAN_OUT to the ledger, record a LEND decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FundLoanRequest' }
+      responses:
+        '200':
+          description: Funded or submitted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FundLoanResponse' }
+        '502':
+          description: Arc did not confirm
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  securitySchemes:
+    serviceToken: { type: apiKey, in: header, name: X-Service-Token }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        detail: { type: string }
+    EvaluateRequest:
+      type: object
+      required: [stokvel_id, trigger]
+      properties:
+        stokvel_id: { type: string }
+        trigger: { type: string, enum: [SCHEDULED_TICK, CONTRIBUTION_WEBHOOK, MANUAL] }
+        context:
+          type: object
+          additionalProperties: true
+          description: Optional overrides, e.g. {"today":"2026-11-02"} for replay
+    EvaluateResponse:
+      type: object
+      required: [decision, reasoning, actions]
+      properties:
+        decision: { type: string, enum: [EXECUTE, PAUSE, PROPOSE, NO_ACTION] }
+        reasoning: { type: string }
+        decision_id: { type: string }
+        actions:
+          type: array
+          items:
+            type: object
+            required: [type]
+            properties:
+              type: { type: string, enum: [ARC_ESCROW_RELEASE, EFT_PAYMENT, RECYCLE_MINIMUM, NOTIFY] }
+              member_id: { type: string }
+              job_id: { type: string }
+              amount: { type: string }
+              tx_hash: { type: string }
+        ledger_entry:
+          type: object
+          additionalProperties: true
+    AssessRequest:
+      type: object
+      required: [stokvel_id, request]
+      properties:
+        stokvel_id: { type: string, description: The lender }
+        request:
+          type: object
+          description: core.yaml#/components/schemas/NewLoanRequest
+          additionalProperties: true
+        payout_date: { type: string, format: date }
+        lendable: { type: string }
+    AssessResponse:
+      type: object
+      required: [tier, recommend, reasoning]
+      properties:
+        tier: { type: string, enum: [A, B, C] }
+        recommend: { type: boolean }
+        reasoning: { type: string }
+        note: { type: string }
+        decision_id: { type: string }
+    FundLoanRequest:
+      type: object
+      required: [stokvel_id, loan_request_id, amount, term_days, rate_pct, borrower_name]
+      properties:
+        stokvel_id: { type: string }
+        loan_request_id: { type: string }
+        amount: { type: string, description: ZAR }
+        term_days: { type: integer }
+        rate_pct: { type: number }
+        borrower_name: { type: string }
+        borrower_wallet: { type: string }
+    FundLoanResponse:
+      type: object
+      required: [status, job_id]
+      properties:
+        status: { type: string, enum: [FUNDED, SUBMITTED] }
+        job_id: { type: string }
+        tx_hash: { type: string }
+        explorer_url: { type: string }
+        usdc_amount: { type: string }
+        decision_id: { type: string }
+        ledger_entry_id: { type: string }

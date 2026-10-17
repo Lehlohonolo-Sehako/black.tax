@@ -1,0 +1,25 @@
+{
+  "name": "@blacktax/agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stateless decision engine for black.tax (api/agent.yaml).",
+  "scripts": {
+    "generate": "openapi-typescript ../../api/core.yaml -o src/generated/core.ts && openapi-typescript ../../api/agent.yaml -o src/generated/agent.ts && openapi-typescript ../../api/ledger.yaml -o src/generated/ledger.ts",
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^8.0.0",
+    "express": "^4.21.2",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "openapi-typescript": "^7.4.4",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,91 @@
+# black.tax — the whole system (system design §6): Postgres, core (Spring Boot / JHipster), agent (Node/TS),
+# ledger (Python/Beancount) and the Next.js frontend. Arc Testnet is external; Stitch runs as the mock rail unless
+# STITCH_MODE=live. Copy .env.example to .env first and set the secrets.
+#
+# Only the frontend (3000) and core (8080) are meant to be reachable. The ledger, agent and Postgres listen on
+# localhost only, for local debugging; containers talk to each other on the compose network.
+name: blacktax
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  postgres:
+    <<: *restart
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: blacktax
+      POSTGRES_USER: blacktax
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-blacktax}
+    ports: ["127.0.0.1:5434:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blacktax -d blacktax"]
+      interval: 5s
+      retries: 20
+
+  ledger:
+    <<: *restart
+    build: ./backend/ledger
+    environment:
+      LEDGER_DIR: /data
+      SERVICE_TOKEN: ${SERVICE_TOKEN:?set SERVICE_TOKEN in .env}
+    volumes: [ledgerdata:/data]
+    ports: ["127.0.0.1:4200:4200"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/health')"]
+      interval: 5s
+      retries: 20
+
+  agent:
+    <<: *restart
+    build:
+      context: .
+      dockerfile: backend/agent/Dockerfile
+    env_file: [.env]
+    environment:
+      CORE_URL: http://core:8080
+      LEDGER_URL: http://ledger:4200
+      PORT: "4100"
+    ports: ["127.0.0.1:4100:4100"]
+    depends_on:
+      ledger: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4100/health"]
+      interval: 5s
+      retries: 20
+
+  core:
+    <<: *restart
+    build:
+      context: .
+      dockerfile: backend/core/Dockerfile
+    env_file: [.env]
+    environment:
+      SPRING_PROFILES_ACTIVE: ${CORE_PROFILE:-dev}
+      DB_URL: jdbc:postgresql://postgres:5432/blacktax
+      LEDGER_URL: http://ledger:4200
+      AGENT_URL: http://agent:4100
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      ledger: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/management/health || curl -fs http://localhost:8080/management/health"]
+      interval: 10s
+      retries: 30
+
+  frontend:
+    <<: *restart
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+        NEXT_PUBLIC_DEMO: ${NEXT_PUBLIC_DEMO:-false}
+    ports: ["3000:3000"]
+    depends_on: [core]
+
+volumes:
+  pgdata:
+  ledgerdata:
