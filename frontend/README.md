@@ -1,12 +1,20 @@
-# black.tax frontend
+# frontend
 
-Next.js app. Screens follow the Claude Design handoff (`../design`).
+The Next.js app. Screens follow the Claude Design handoff in [`../design`](../design); every figure on screen comes from the core API and every action calls it.
 
-- `src/api/` — typed client generated from `../api/core.yaml` (`npm run generate`), the snapshot loader and the
-  adapters from API DTOs to view models.
-- `src/screens/markup.html` — the screen markup (from the design, with figures bound to API data). `npm run generate:view`
-  compiles it to `View.jsx` with `scripts/convert.py`. Edit the markup, not `View.jsx`.
-- `src/screens/App.jsx` — view models and actions; every figure comes from the API and every action calls it.
-- `npm run smoke` — renders every screen against a running backend.
+| Path | Role |
+|---|---|
+| `src/api/generated.ts` | Types generated from [`../api/core.yaml`](../api/core.yaml) (`npm run generate`) |
+| `src/api/client.ts`, `snapshot.ts`, `adapt.ts` | Typed `openapi-fetch` client, the per-stokvel snapshot loader, and the mapping from API data to view models |
+| `src/screens/markup.html` | Screen markup, from the design with its figures bound to data. **Edit this, not `View.jsx`.** |
+| `src/screens/View.jsx` | Generated from the markup by `scripts/convert.py` (`npm run generate:view`) |
+| `src/screens/App.jsx` | View models and actions |
+| `scripts/smoke.mts` | Renders every screen, sheet and breakpoint against a running backend (`npm run smoke`) |
 
-See the root README for running the whole system.
+Environment, fixed at build time:
+- `NEXT_PUBLIC_API_URL`: the core API, default `http://localhost:8080/api`.
+- `NEXT_PUBLIC_DEMO=true`: shows the demo bar (viewport switcher, scenario buttons, one-click sign-in) and the OTP hint. Off by default. It needs core's `dev` profile.
+
+```bash
+npm run generate && npm run dev     # http://localhost:3000
+```

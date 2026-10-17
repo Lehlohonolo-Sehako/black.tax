@@ -1,188 +1,53 @@
 # core
 
-This application was generated using JHipster 9.0.0, you can find documentation and help at [https://www.jhipster.tech/documentation-archive/v9.0.0](https://www.jhipster.tech/documentation-archive/v9.0.0).
+The system of record: stokvels, members, contributions, debts, loans, loan requests, agent decisions, notifications, and a mirror of the Beancount ledger. Spring Boot 4 on JHipster 9, with Postgres, Liquibase and JWT.
 
-## Project Structure
+## API-first
 
-Node is required for generation and recommended for development. `package.json` is always generated for a better development experience with prettier, commit hooks, scripts and so on.
+The REST API is defined in [`../../api/core.yaml`](../../api/core.yaml). `openapi-generator` (delegate pattern, `Dto` suffix) generates `tax.black.core.web.api.*Api` interfaces and `service.api.dto.*Dto` models into `target/generated-sources` on every build. The implementations are the delegates in `src/main/java/tax/black/core/web/delegate/`:
 
-In the project root, JHipster generates configuration files for tools like git, prettier, eslint, husky, and others that are well known and you can find references in the web.
+| Delegate | Covers |
+|---|---|
+| `AuthDelegate`, `SessionIssuer` | phone + OTP sign-in issuing JHipster's JWT; `/me` |
+| `StokvelsDelegate` | stokvel list, creation, dashboard, constitution changes, queue votes, dissolution proposals |
+| `MembersDelegate` | roster, member detail, invitations, contribution changes, pause/resume, removal |
+| `LedgerDelegate` | ledger mirror, entry detail with Beancount text and hash, CSV export |
+| `AgentDelegate` | decision feed, run the agent, treasurer resume |
+| `LendingDelegate` | lendable amount, loan requests (assessed by the agent), approval (escrow on Arc via the agent), decline, loans |
+| `WebhooksDelegate` | signed Stitch events |
+| `InternalDelegate` | the agent's read (`/internal/.../state`) and write (`/internal/.../decisions`) paths, service-token only |
+| `DevDelegate` | demo login and simulated Stitch events, `dev` profile only |
 
-`/src/*` structure follows default Java structure.
+Business logic lives in `tax.black.core.blacktax` (dashboard maths, ledger mirroring, decision effects, Stitch gateways, jobs, seed data).
 
-- `.yo-rc.json` - Yeoman configuration file
-  JHipster configuration is stored in this file at `generator-jhipster` key. You may find `generator-jhipster-*` for specific blueprints configuration.
-- `.yo-resolve` (optional) - Yeoman conflict resolver
-  Allows to use a specific action when conflicts are found skipping prompts for files that matches a pattern. Each line should match `[pattern] [action]` with pattern been a [Minimatch](https://github.com/isaacs/minimatch#minimatch) pattern and action been one of skip (default if omitted) or force. Lines starting with `#` are considered comments and are ignored.
-- `.jhipster/*.json` - JHipster entity configuration files
-- `/src/main/docker` - Docker configurations for the application and services that the application depends on
+## Tenancy
 
-## Development
+- **Tenant column:** every tenant-owned entity has `tenant_id` (the stokvel code) annotated with Hibernate `@TenantId`, so queries are filtered automatically.
+- **Membership check:** `TenantAccessInterceptor` checks that the caller belongs to the stokvel in `/api/stokvels/{stokvelId}/…`. Internal paths use the service token instead.
+- **Money reads:** reads that affect money (balances, entry codes) also filter by tenant explicitly.
+- **Test:** `TenantIsolationIT` covers all of the above.
 
-To start your application in the dev profile, run:
+## Jobs
 
-```bash
-./mvnw
-```
+| Job | When (SAST) | What |
+|---|---|---|
+| Collections | 06:00 daily (`COLLECTION_CRON`) | Starts DebiCheck collections that fall due today; results arrive as Stitch webhooks |
+| Agent tick | 07:00 daily (`AGENT_CRON`) | Asks the agent to evaluate every stokvel |
 
-For further instructions on how to develop with JHipster, have a look at [Using JHipster in development][].
+## Running
 
-### Doing API-First development using openapi-generator-cli
-
-[OpenAPI-Generator](https://openapi-generator.tech) is configured for this application. You can generate API code from the `src/main/resources/swagger/api.yml` definition file by running:
-
-```bash
-./mvnw generate-sources
-```
-
-Then implements the generated delegate classes with `@Service` classes.
-
-To edit the `api.yml` definition file, you can use a tool such as [Swagger-Editor](). Start a local instance of the swagger-editor using docker by running: `docker compose -f src/main/docker/swagger-editor.yml up -d`. The editor will then be reachable at [http://localhost:7742](http://localhost:7742).
-
-Refer to [Doing API-First development](https://www.jhipster.tech/documentation-archive/v9.0.0/doing-api-first-development/) for more details.
-
-## Building for production
-
-### Packaging as jar
-
-To build the final jar and optimize the core application for production, run:
+The usual way is `./scripts/stack.sh start` from the repo root. To run natively against the compose Postgres on :5434:
 
 ```bash
-./mvnw -Pprod clean verify
+SERVICE_TOKEN=... ./mvnw          # dev profile: seeds demo data, OTP 123456, /api/dev/* enabled
 ```
 
-To ensure everything worked, run:
+Settings are environment variables; see `../../.env.example` and `tax.black.core.blacktax.Settings`. Outside the `dev` profile, demo shortcuts are disabled and core refuses to start with default secrets.
+
+## Tests
 
 ```bash
-java -jar target/*.jar
+./mvnw verify -Dit.test=TenantIsolationIT     # needs Docker (Testcontainers Postgres)
 ```
 
-Refer to [Using JHipster in production][] for more details.
-
-### Packaging as war
-
-To package your application as a war in order to deploy it to an application server, run:
-
-```bash
-./mvnw -Pprod,war clean verify
-```
-
-### JHipster Control Center
-
-JHipster Control Center can help you manage and control your application(s). You can start a local control center server (accessible on http://localhost:7419) with:
-
-```bash
-docker compose -f src/main/docker/jhipster-control-center.yml up
-```
-
-## Testing
-
-### Spring Boot tests
-
-To launch your application's tests, run:
-
-```bash
-./mvnw verify
-```
-
-## Others
-
-### Code quality using Sonar
-
-Sonar is used to analyse code quality. You can start a local Sonar server (accessible on http://localhost:9001) with:
-
-```bash
-docker compose -f src/main/docker/sonar.yml up -d
-```
-
-Note: we have turned off forced authentication redirect for UI in [src/main/docker/sonar.yml](src/main/docker/sonar.yml) for out of the box experience while trying out SonarQube, for real use cases turn it back on.
-
-You can run a Sonar analysis with using the [sonar-scanner](https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner) or by using the maven plugin.
-
-Then, run a Sonar analysis:
-
-```bash
-./mvnw -Pprod clean verify sonar:sonar -Dsonar.login=admin -Dsonar.password=admin
-```
-
-If you need to re-run the Sonar phase, please be sure to specify at least the `initialize` phase since Sonar properties are loaded from the sonar-project.properties file.
-
-```bash
-./mvnw initialize sonar:sonar -Dsonar.login=admin -Dsonar.password=admin
-```
-
-Additionally, Instead of passing `sonar.password` and `sonar.login` as CLI arguments, these parameters can be configured from [sonar-project.properties](sonar-project.properties) as shown below:
-
-```bash
-sonar.login=admin
-sonar.password=admin
-```
-
-For more information, refer to the [Code quality page][].
-
-### Docker Compose support
-
-JHipster generates a number of Docker Compose configuration files in the [src/main/docker/](src/main/docker/) folder to launch required third party services.
-
-For example, to start required services in Docker containers, run:
-
-```bash
-docker compose -f src/main/docker/services.yml up -d
-```
-
-To stop and remove the containers, run:
-
-```bash
-docker compose -f src/main/docker/services.yml down
-```
-
-[Spring Docker Compose Integration](https://docs.spring.io/spring-boot/reference/features/dev-services.html) is enabled by default. It's possible to disable it in `application.yml`:
-
-```yaml
-spring:
-  ...
-  docker:
-    compose:
-      enabled: false
-```
-
-You can also fully dockerize your application and all the services that it depends on.
-To achieve this, first build a Docker image of your app by running:
-
-```bash
-npm run java:docker
-```
-
-Or build an arm64 Docker image when using an arm64 processor OS, i.e., Apple Silicon chips (M\*), running:
-
-```bash
-npm run java:docker:arm64
-```
-
-Then run:
-
-```bash
-docker compose -f src/main/docker/app.yml up -d
-```
-
-For more information refer to [Docker and Docker-Compose](https://www.jhipster.tech/documentation-archive/v9.0.0/docker-compose/), this page also contains information on the Docker Compose sub-generator (`jhipster docker-compose`), which is able to generate Docker configurations for one or several JHipster applications.
-
-## Continuous Integration (optional)
-
-To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`), this will let you generate configuration files for a number of Continuous Integration systems. Consult the [Setting up Continuous Integration](https://www.jhipster.tech/documentation-archive/v9.0.0/setting-up-ci/) page for more information.
-
-## References
-
-- [JHipster Homepage and latest documentation](https://www.jhipster.tech/)
-- [JHipster 9.0.0 archive](https://www.jhipster.tech/documentation-archive/v9.0.0)
-- [Using JHipster in development](https://www.jhipster.tech/documentation-archive/v9.0.0/development/)
-- [Using Docker and Docker-Compose](https://www.jhipster.tech/documentation-archive/v9.0.0/docker-compose)
-- [Using JHipster in production](https://www.jhipster.tech/documentation-archive/v9.0.0/production/)
-- [Running tests page](https://www.jhipster.tech/documentation-archive/v9.0.0/running-tests/)
-- [Code quality page](https://www.jhipster.tech/documentation-archive/v9.0.0/code-quality/)
-- [Setting up Continuous Integration](https://www.jhipster.tech/documentation-archive/v9.0.0/setting-up-ci/)
-- [Node.js](https://nodejs.org/)
-- [NPM](https://www.npmjs.com/)
-- [OpenAPI-Generator](https://openapi-generator.tech)
-- [Swagger-Editor](https://editor.swagger.io)
-- [Doing API-First development](https://www.jhipster.tech/documentation-archive/v9.0.0/doing-api-first-development/)
+JHipster's own documentation: https://www.jhipster.tech/documentation-archive/v9.0.0
