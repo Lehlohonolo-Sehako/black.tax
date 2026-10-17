@@ -73,6 +73,15 @@ export function idempotencyKey(ref: string, step: string): string {
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`;
 }
 
+/** Circle wants the 32-byte entity secret as 64 hex characters; accept a base64 copy of the same bytes too. */
+export function entitySecretHex(secret: string): string {
+  const v = secret.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(v)) return v.toLowerCase();
+  const b = Buffer.from(v, 'base64');
+  if (b.length === 32 && b.toString('base64') === v) return b.toString('hex');
+  throw new Error('CIRCLE_ENTITY_SECRET must be 32 bytes, as 64 hex characters (or base64)');
+}
+
 /** Opaque bytes32 for on-chain fields. No personal information goes on chain. */
 export const bytes32 = (s: string) => '0x' + createHash('sha256').update(s).digest('hex');
 
@@ -103,7 +112,7 @@ export class CircleArcRail implements ArcRail {
 
   static async create(): Promise<CircleArcRail> {
     const { initiateDeveloperControlledWalletsClient } = await import('@circle-fin/developer-controlled-wallets');
-    const client = initiateDeveloperControlledWalletsClient({ apiKey: env('CIRCLE_API_KEY'), entitySecret: env('CIRCLE_ENTITY_SECRET') });
+    const client = initiateDeveloperControlledWalletsClient({ apiKey: env('CIRCLE_API_KEY'), entitySecret: entitySecretHex(env('CIRCLE_ENTITY_SECRET')) });
     return new CircleArcRail(client as unknown as CircleClient);
   }
 

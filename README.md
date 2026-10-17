@@ -18,6 +18,21 @@ design/           the Claude Design prototype the screens were built from
 docker-compose.yml
 ```
 
+## On-chain proof (Arc Testnet)
+
+A real inter-stokvel loan settled through Circle's ERC-8183 escrow (`0x0747EEf0706327138c69792bF28Cd525089e4583`) on 17 Oct 2026: Soweto Grocery Club lent R8,000 to Diepkloof Grocery Society (`REQ-31`), scaled to 0.444444 USDC for the testnet. **Job 186928**, six transactions, all successful:
+
+| # | Step | Transaction |
+|---|---|---|
+| 1 | `createJob` | [0x0b5bde14…d5ca74](https://explorer.testnet.arc.io/tx/0x0b5bde14cd91337e5ebab12145a060d2ff0a117d800ef93c629c6fb32dd5ca74) |
+| 2 | `setBudget` | [0xc1fecee2…b6bbe7](https://explorer.testnet.arc.io/tx/0xc1fecee2440f0c2e9f27ed22a0bd9474d9af8684699e65bec7b5e3575db6bbe7) |
+| 3 | `approve` | [0xd4b1682b…4d6412](https://explorer.testnet.arc.io/tx/0xd4b1682b30706a5faa8b867fb99e9ae6d2788af47aaec86dd5e578a1fa4d6412) |
+| 4 | `fund` | [0x48032cfd…aea1b6](https://explorer.testnet.arc.io/tx/0x48032cfde80c37a32f3240ebc31c6d8ca6e30044ae69c55c24b9296a1faea1b6) |
+| 5 | `submit` | [0x8f865d39…33397e](https://explorer.testnet.arc.io/tx/0x8f865d398aa47a5692abba1dd306b4803db685eebce97f75adcccd8d5633397e) |
+| 6 | `complete` | [0x888e2287…d7fdea](https://explorer.testnet.arc.io/tx/0x888e2287b03624d9057d87ccb6dff1eb45bdf4bfb4c3e6c51f93c5983bd7fdea) |
+
+Lender wallet `0x6a0646ea5e95e264b459ae0b25db6d494a1e5dc8` (client and evaluator), borrower wallet `0x420041a5f9366f8653c3599b5c885ca29daac891` (provider). Both are Circle developer-controlled EOA wallets on `ARC-TESTNET`.
+
 ## How the pieces talk
 
 ```
@@ -42,6 +57,18 @@ frontend ──JWT──▶ core (system of record) ──▶ agent ──▶ Ar
 3. The compiler tells you what no longer matches.
 
 ## Run it
+
+Control the whole stack (Docker and any native dev processes on its ports) with one script:
+
+```bash
+./scripts/stack.sh start [--build]    # start and wait until every service is healthy
+./scripts/stack.sh stop               # stop Docker containers and native black.tax processes (others are left alone)
+./scripts/stack.sh restart [--build]
+./scripts/stack.sh status
+./scripts/stack.sh reset              # wipe and reseed the demo data (asks first)
+```
+
+Arc helper scripts (from `backend/agent`): `npx tsx scripts/arc-register-secret.ts` (one-time entity secret registration; the recovery file goes outside the repo), `npx tsx scripts/arc-setup.ts` (creates and saves the two wallets), `npx tsx scripts/arc-status.ts` (balances).
 
 Everything in containers:
 
@@ -96,7 +123,7 @@ CORE_URL=http://localhost:8080/api SERVICE_TOKEN=... schemathesis run ../../core
 
 | Rail | Default | Real mode |
 |---|---|---|
-| Arc / USDC escrow | mock rail (same shapes; every decision and ledger entry says "mock") | `ARC_MODE=circle` (see below). Uses Circle's ERC-8183 reference contract on Arc Testnet, `0x0747EEf0706327138c69792bF28Cd525089e4583`. |
+| Arc / USDC escrow | **live on Arc Testnet** when `ARC_MODE=circle` (see On-chain proof); mock rail otherwise, labelled "mock" everywhere | `ARC_MODE=circle` (see below). Uses Circle's ERC-8183 reference contract on Arc Testnet, `0x0747EEf0706327138c69792bF28Cd525089e4583`. |
 | Stitch DebiCheck | mock rail that delivers signed webhooks | Not finished: Stitch's real API differs (mandates via `paymentConsentRequestCreate`, collections as SFTP batch files, webhooks signed with Svix). See `reports/`. |
 | SMS | logged | plug a provider into `AuthDelegate.requestOtp` |
 
