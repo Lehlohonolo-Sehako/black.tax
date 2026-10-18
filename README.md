@@ -8,9 +8,9 @@ Built for the [Tameion Agents Hackathon](https://tameion.thecanteenapp.com) (Can
 
 ## Demo video (3 min)
 
-[![black.tax demo: approving a stokvel-to-stokvel loan that settles in USDC on Arc](docs/recording/poster.jpg)](docs/recording/black.tax-demo.mp4)
+[![black.tax demo: approving a stokvel-to-stokvel loan that settles in USDC on Arc](docs/recording/poster.jpg)](https://github.com/Lehlohonolo-Sehako/black.tax/raw/main/docs/recording/black.tax-demo.mp4)
 
-▶ **[Watch the demo](docs/recording/black.tax-demo.mp4)** (MP4, 3:06). It shows:
+▶ **[Watch the demo](https://github.com/Lehlohonolo-Sehako/black.tax/raw/main/docs/recording/black.tax-demo.mp4)** (MP4, 3:06). It shows:
 
 1. **Sign-in:** a treasurer signs in with a phone number and a one-time code.
 2. **Home:** the Debt-Payoff stokvel, where every figure traces to a Beancount ledger entry and its file hash.
