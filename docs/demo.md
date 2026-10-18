@@ -50,7 +50,7 @@ Naledi has been invited but hasn't approved her mandate, so it shows as *Invited
 
 ## Scenarios
 
-With `NEXT_PUBLIC_DEMO=true` the dark demo bar runs these from the UI. Otherwise use the API calls at the end.
+With `NEXT_PUBLIC_DEMO=true` the dark demo bar runs these from the UI. Without it, `./scripts/demo.sh pause`, `resume`, `fail`, `run` and `balances` send the signed Stitch events and run the agent from a terminal; the API calls at the end do the same by hand.
 
 | Scenario | Do this | You should see |
 |---|---|---|
