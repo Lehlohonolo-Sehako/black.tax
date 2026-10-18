@@ -20,3 +20,7 @@ reports/
 # Original screen recordings (the README uses the compressed MP4)
 docs/recording/*.mov
 .DS_Store
+
+# TLS keystores: generate your own (see application-prod.yml), never commit them
+*.p12
+*.jks
