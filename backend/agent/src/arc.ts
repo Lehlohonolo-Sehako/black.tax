@@ -64,9 +64,14 @@ export function toUsdc(zarCents: number): { usdc: string; units: bigint } {
   return { usdc: (Number(units) / 1_000_000).toFixed(6), units };
 }
 
-/** A UUID v4-shaped key derived from the loan reference and step, so retries reuse it (Circle exactly-once). */
-export function idempotencyKey(ref: string, step: string): string {
-  const h = createHash('sha256').update(`black.tax:${ref}:${step}`).digest();
+/**
+ * A UUID v4-shaped key derived from the loan reference and step, so retries reuse it (Circle exactly-once).
+ * ARC_RUN_ID scopes keys to one copy of the data: a demo reset reuses request IDs, and without it Circle
+ * would return the previous run's transactions instead of opening a new job.
+ */
+export function idempotencyKey(ref: string, step: string, run = process.env.ARC_RUN_ID ?? ''): string {
+  const scope = run ? `${run}:${ref}` : ref;
+  const h = createHash('sha256').update(`black.tax:${scope}:${step}`).digest();
   h[6] = (h[6] & 0x0f) | 0x40;
   h[8] = (h[8] & 0x3f) | 0x80;
   const x = h.subarray(0, 16).toString('hex');

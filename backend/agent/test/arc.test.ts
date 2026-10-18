@@ -13,6 +13,8 @@ test('idempotency keys are stable UUID v4 per loan and step', () => {
   assert.match(k, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   assert.equal(k, idempotencyKey('grocery-REQ-31', 'fund'));
   assert.notEqual(k, idempotencyKey('grocery-REQ-31', 'approve'));
+  assert.notEqual(k, idempotencyKey('grocery-REQ-31', 'fund', 'run-2'));
+  assert.equal(idempotencyKey('grocery-REQ-31', 'fund', 'run-2'), idempotencyKey('grocery-REQ-31', 'fund', 'run-2'));
 });
 
 test('USDC conversion uses 6 decimals', () => {

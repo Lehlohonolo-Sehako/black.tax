@@ -161,6 +161,11 @@ case "${1:-}" in
     stop_native
     bold "Resetting demo data"
     docker compose down -v --remove-orphans >/dev/null && ok "volumes removed"
+    # New Arc idempotency scope, so reseeded loan requests open new escrow jobs
+    run_id="run-$(date +%Y%m%d%H%M%S)"
+    if grep -q '^ARC_RUN_ID=' .env 2>/dev/null; then sed -i.bak "s/^ARC_RUN_ID=.*/ARC_RUN_ID=$run_id/" .env && rm -f .env.bak
+    else echo "ARC_RUN_ID=$run_id" >> .env; fi
+    ok "Arc run id $run_id"
     start_stack
     ;;
   *)
