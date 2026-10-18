@@ -70,12 +70,12 @@ Approving `REQ-31` with `ARC_MODE=circle` makes real testnet transactions and us
 
 1. **Problem (0:00–0:20).** Stokvels pool R50bn a year; 10.5m South Africans have impaired credit. The treasurer runs it from a notebook.
 2. **Home (0:20–0:45).** Masakhane: debt remaining, the payoff queue, interest saved. Tap a figure to show it traces to the ledger.
-3. **The agent pauses (0:45–1:15).** Lerato's bank cancels her mandate, and the agent pauses with its reasons. Open Agent activity to show *What I saw / What I decided / What happened*.
+3. **The agent pauses (0:45–1:15).** Run `./scripts/demo.sh pause` and reload: Lerato's bank cancels her mandate, and the agent pauses with its reasons. Open Agent activity to show *What I saw / What I decided / What happened*.
 4. **Lending on Arc (1:15–2:15).** Soweto Grocery Club → Lend: the agent's tier and reasoning for `REQ-31`. Approve it, watch it settle, then open the explorer link and show the six transactions of the ERC-8183 job.
 5. **The ledger (2:15–2:40).** Open the LOAN_OUT entry: the Beancount text, its file hash, the Arc transaction.
 6. **Close (2:40–3:00).** Built API-first on Arc and Circle wallets; what's next (Stitch live, real stokvels).
 
-Before recording, run `./scripts/stack.sh reset` so `REQ-31` is open and Lerato's mandate is active.
+Before recording, run `./scripts/stack.sh reset` so `REQ-31` is open, Lerato's mandate is active, and a new `ARC_RUN_ID` makes the approval open a new Arc job. The recorded take is [recording/black.tax-demo.mp4](recording/black.tax-demo.mp4).
 
 ## API shortcuts
 

@@ -12,7 +12,7 @@ A stateless decision engine. It reads a stokvel's state from core and its pool b
 | `src/clients.ts` | Core (internal API) and ledger clients, with timeouts |
 | `scripts/arc-*.ts` | Arc setup: register the entity secret, create the wallets, show balances. See [docs/arc-testnet.md](../../docs/arc-testnet.md). |
 
-Ledger writes carry an `entry_id` derived from the state the decision was made on, so a retry after a failed write to core can't pay twice.
+Ledger writes carry an `entry_id` derived from the state the decision was made on, so a retry after a failed write to core can't pay twice. Circle calls carry idempotency keys derived from the loan, the step and `ARC_RUN_ID`.
 
 ```bash
 npm run generate          # types from api/*.yaml into src/generated

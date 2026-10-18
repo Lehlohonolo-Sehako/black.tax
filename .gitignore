@@ -16,3 +16,7 @@ api/schemathesis/**/reports/
 research_notes/
 reports/
 .schemathesis/
+
+# Original screen recordings (the README uses the compressed MP4)
+docs/recording/*.mov
+.DS_Store

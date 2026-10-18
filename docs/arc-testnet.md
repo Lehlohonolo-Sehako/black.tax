@@ -22,7 +22,7 @@ How the rail runs these steps (`backend/agent/src/arc.ts`):
 
 - **Confirmed steps:** each step must be final before the next one starts. On Arc, contract calls go straight from SENT to COMPLETE.
 - **Job ID:** read from the `JobCreated` event in the `createJob` receipt (topic0 `0xb0f0239b…79b9`).
-- **No duplicates:** every Circle call carries an idempotency key derived from the loan and the step, so a retried approval can't open a second job.
+- **No duplicates:** every Circle call carries an idempotency key derived from the loan and the step, so a retried approval can't open a second job. Keys are scoped by `ARC_RUN_ID`, which `./scripts/stack.sh reset` renews, so reseeded requests with the same IDs open new jobs instead of Circle returning the previous run's transactions.
 - **Disbursement deadline:** `expiredAt` is `ARC_DISBURSE_WINDOW_SECONDS` from now (24 hours by default), not the loan term. After it passes, anyone can refund the lender.
 - **Release:** set `ARC_AUTO_DISBURSE=false` to stop after `fund` and release later.
 
@@ -30,7 +30,16 @@ Rand amounts are converted at `ZAR_PER_USDC` and scaled by `ARC_DEMO_SCALE`, so 
 
 ## Proof
 
-Job **186928** on 17 Oct 2026, from approving `REQ-31` in the app. All six transactions succeeded:
+Job **186930** on 18 Oct 2026, approved on camera in the [demo video](recording/black.tax-demo.mp4). All six transactions succeeded:
+
+1. createJob: https://explorer.testnet.arc.io/tx/0x76bac3f2bfed29296e400c42bf84b50d1ac7c28150949282b304ba625482260e
+2. setBudget: https://explorer.testnet.arc.io/tx/0x9c6740869c65d8def85089f7d45c566d0be01c99afe37c663665a5443ac2001e
+3. approve: https://explorer.testnet.arc.io/tx/0xf0e555c6e414f30a1bee1200103ecf317df742f48b8d395016cd92b849cdb91b
+4. fund: https://explorer.testnet.arc.io/tx/0xce4584bc2ea9dd80f079c1d4e874b28f48a6b7c53a048a69e662da78b2991ec1
+5. submit: https://explorer.testnet.arc.io/tx/0x487258f2417fb6ecbfef523ee996714d74befbe88f52bdf3cfa644488ac91399
+6. complete: https://explorer.testnet.arc.io/tx/0x622cd4793b00a3314995a79fa4283f0bf9cf36f8e4fbe2c8f0ac129f258bfb10
+
+The first run, job **186928** on 17 Oct 2026, also from approving `REQ-31` in the app:
 
 1. createJob: https://explorer.testnet.arc.io/tx/0x0b5bde14cd91337e5ebab12145a060d2ff0a117d800ef93c629c6fb32dd5ca74
 2. setBudget: https://explorer.testnet.arc.io/tx/0xc1fecee2440f0c2e9f27ed22a0bd9474d9af8684699e65bec7b5e3575db6bbe7
