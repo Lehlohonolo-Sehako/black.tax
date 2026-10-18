@@ -75,7 +75,7 @@ Approving `REQ-31` with `ARC_MODE=circle` makes real testnet transactions and us
 5. **The ledger (2:15–2:40).** Open the LOAN_OUT entry: the Beancount text, its file hash, the Arc transaction.
 6. **Close (2:40–3:00).** Built API-first on Arc and Circle wallets; what's next (Stitch live, real stokvels).
 
-Before recording, run `./scripts/stack.sh reset` so `REQ-31` is open, Lerato's mandate is active, and a new `ARC_RUN_ID` makes the approval open a new Arc job. The recorded take is [recording/black.tax-demo.mp4](recording/black.tax-demo.mp4).
+Before recording, run `./scripts/stack.sh reset` so `REQ-31` is open, Lerato's mandate is active, and a new `ARC_RUN_ID` makes the approval open a new Arc job. The recorded take is on [YouTube](https://youtu.be/uQOes1RoWlA) and in [recording/black.tax-demo.mp4](recording/black.tax-demo.mp4).
 
 ## API shortcuts
 

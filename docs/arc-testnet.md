@@ -30,7 +30,7 @@ Rand amounts are converted at `ZAR_PER_USDC` and scaled by `ARC_DEMO_SCALE`, so 
 
 ## Proof
 
-Job **186930** on 18 Oct 2026, approved on camera in the [demo video](recording/black.tax-demo.mp4). All six transactions succeeded:
+Job **186930** on 18 Oct 2026, approved on camera in the [demo video](https://youtu.be/uQOes1RoWlA). All six transactions succeeded:
 
 1. createJob: https://explorer.testnet.arc.io/tx/0x76bac3f2bfed29296e400c42bf84b50d1ac7c28150949282b304ba625482260e
 2. setBudget: https://explorer.testnet.arc.io/tx/0x9c6740869c65d8def85089f7d45c566d0be01c99afe37c663665a5443ac2001e

@@ -4,13 +4,15 @@
 
 Built for the [Tameion Agents Hackathon](https://tameion.thecanteenapp.com) (Canteen × Circle, 27 Sep – 17 Oct 2026). Closest fit: **RFB 4, Autonomous Business Operator**, with angles on RFB 1 (treasury) and RFB 3 (escrow).
 
+> **Demo video:** [youtu.be/uQOes1RoWlA](https://youtu.be/uQOes1RoWlA) (3 min)
+>
 > **On-chain proof:** the loan approved in the demo video settled through Circle's ERC-8183 escrow on Arc Testnet as **[job 186930](#on-chain-proof-arc-testnet)**, six transactions, all successful.
 
 ## Demo video (3 min)
 
-[![black.tax demo: approving a stokvel-to-stokvel loan that settles in USDC on Arc](docs/recording/poster.jpg)](https://github.com/Lehlohonolo-Sehako/black.tax/raw/main/docs/recording/black.tax-demo.mp4)
+[![black.tax demo: approving a stokvel-to-stokvel loan that settles in USDC on Arc](docs/recording/poster.jpg)](https://youtu.be/uQOes1RoWlA)
 
-▶ **[Watch the demo](https://github.com/Lehlohonolo-Sehako/black.tax/raw/main/docs/recording/black.tax-demo.mp4)** (MP4, 3:06). It shows:
+▶ **[Watch on YouTube](https://youtu.be/uQOes1RoWlA)** (3:06) · [download the MP4](https://github.com/Lehlohonolo-Sehako/black.tax/raw/main/docs/recording/black.tax-demo.mp4). It shows:
 
 1. **Sign-in:** a treasurer signs in with a phone number and a one-time code.
 2. **Home:** the Debt-Payoff stokvel, where every figure traces to a Beancount ledger entry and its file hash.
