@@ -1,6 +1,8 @@
 # black.tax
 
-**An agent that runs a stokvel's treasury, explains every decision it makes, and settles loans between stokvels in USDC on Arc.**
+**Pay it off together. An agent that runs a stokvel's treasury, clears its members' debt, explains every decision it makes, and settles loans between stokvels in USDC on Arc.**
+
+*What goes out, comes back.*
 
 Built for the [Tameion Agents Hackathon](https://tameion.thecanteenapp.com) (Canteen × Circle, 27 Sep – 17 Oct 2026). Closest fit: **RFB 4, Autonomous Business Operator**, with angles on RFB 1 (treasury) and RFB 3 (escrow).
 
@@ -20,8 +22,20 @@ Built for the [Tameion Agents Hackathon](https://tameion.thecanteenapp.com) (Can
 4. **Loan:** the agent grades another stokvel's loan request as Tier A. The treasurer approves it, and six real transactions settle it on Arc Testnet.
 5. **Proof:** the transaction on the Arc explorer, then the LOAN_OUT ledger entry that carries its hash.
 
+## Why the name
+
+In South Africa, **"black tax"** is the money many Black earners, often the first in their family with a salary, send home every month. It pays for a parent's groceries, a sibling's school fees, a cousin's funeral policy. It comes from love and duty, but it rarely comes back. With little left over, emergencies go on store cards, payday loans and credit cards, and the debt compounds at some of the highest rates the law allows.
+
+**black.tax takes the name and turns it around.** The giving stays. The difference is that it flows through the stokvel, a structure South Africans already trust: members contribute together, and the pool attacks the group's most expensive debt first. When one member is debt-free, their old minimum payment is recycled into the pool for the next person, so every payoff speeds up the one after it. That's where the tagline comes from: *what goes out, comes back.*
+
+**The goal is to destroy debt, one member at a time, as a group.** Everything else serves that goal:
+- **The agent** never misses a rule and never plays favourites.
+- **The ledger** lets every member check every rand.
+- **Lending between stokvels** puts idle savings to work for another group, at fair rates and with the escrow on chain, instead of leaving them at the mercy of a loan shark.
+
 ## Contents
 
+- [Why the name](#why-the-name)
 - [Why](#why)
 - [What it does](#what-it-does)
 - [How the agent decides](#how-the-agent-decides)
